@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcar Planing</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #fef08a 0%, #f9a8d4 50%, #93c5fd 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --primary: #f97316;
+            --primary-hover: #ea580c;
+            --text-color: #1e293b;
+            --excel-border: #cbd5e1;
+            --excel-header: #e2e8f0;
+            --danger: #ef4444;
+            --success-bg: #4ade80;
+            --accent: #2563eb;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* HEADER & TOP BAR */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1100px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 25px;
+            border-radius: 30px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }
+        .logo-tcf { display: flex; align-items: center; gap: 10px; }
+        .logo-badge { background: var(--primary); color: white; font-weight: 900; font-size: 1.3rem; padding: 4px 12px; border-radius: 10px; text-transform: uppercase; }
+        .logo-text { font-weight: 800; font-size: 1.2rem; color: #334155; }
+
+        .lang-selector button { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 5px 10px; cursor: pointer; border-radius: 20px; font-weight: bold; }
+        .lang-selector button.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .view-panel { background-color: var(--card-bg); padding: 25px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 1100px; box-sizing: border-box; border: 1px solid white; margin-bottom: 25px; }
+
+        /* LOGIN PORTAL */
+        .boss-login-box { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .boss-input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: bold; width: 140px; }
+        .lists-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .login-list-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        .inline-input { padding: 5px; border: 1px solid #cbd5e1; border-radius: 6px; width: 80px; text-align: center; }
+        .inline-btn { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        #panel-jefe, #panel-trabajador { display: none; }
+        .welcome-user { background: #ffedd5; color: #c2410c; padding: 8px 12px; border-radius: 10px; font-weight: bold; margin-bottom: 15px; display: inline-block; }
+
+        /* CRUD */
+        .crud-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .crud-inputs { display: flex; gap: 10px; margin-top: 8px; }
+        .crud-inputs input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; flex: 1; }
+
+        /* MATRIZ EXCEL */
+        .excel-table {
+            display: grid;
+            grid-template-columns: 160px repeat(7, minmax(95px, 1fr));
+            border: 1px solid var(--excel-border);
+            background-color: #f1f5f9;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .excel-cell {
+            border: 1px solid var(--excel-border);
+            padding: 4px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 55px;
+            box-sizing: border-box;
+            position: relative;
+            user-select: none;
+        }
+        .excel-header { background-color: var(--excel-header); font-weight: bold; color: #334155; min-height: 40px; }
+        .excel-header span.date-sub { font-size: 0.7rem; color: #64748b; font-weight: normal; }
+
+        .click-zone {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            padding-top: 2px;
+            min-height: 22px;
+        }
+        
+        .excel-text-item {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            padding: 2px 4px;
+            box-sizing: border-box;
+            background: #fff;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        .excel-cell.status-working { background-color: var(--success-bg) !important; }
+        .excel-cell.status-working .excel-text-item { background-color: rgba(255,255,255,0.7); }
+        
+        .red-x-indicator { color: var(--danger); font-size: 0.95rem; font-weight: bold; }
+        .green-dot-indicator { font-size: 0.9rem; }
+
+        /* SECCIÓN HISTORIAL DINÁMICA */
+        .history-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 12px; margin-top: 25px; }
+        .history-workers-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        
+        .worker-history-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .worker-history-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .worker-history-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .calendar-dropdown-container {
+            margin-top: 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            display: none;
+        }
+        .calendar-grid-mayo {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .calendar-day-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            min-height: 52px;
+            padding: 4px;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .calendar-day-box .day-num { font-size: 0.7rem; color: #94a3b8; font-weight: bold; }
+        .calendar-day-box .day-content { font-size: 0.7rem; font-weight: bold; text-align: center; }
+
+        button.action-btn { background-color: var(--primary); color: white; border: none; padding: 12px; font-size: 0.95rem; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button.action-btn:hover { background-color: var(--primary-hover); }
+        .logout-btn { background-color: #64748b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="logo-tcf"><div class="logo-badge">Transcar</div><div class="logo-text">Planing</div></div>
+        <div class="lang-selector">
+            <button onclick="setLanguage('fr')" id="btn-fr" class="active">FR</button>
+            <button onclick="setLanguage('es')" id="btn-es">ES</button>
+        </div>
+    </div>
+
+    <div id="panel-login" class="view-panel">
+        <div class="boss-login-box">
+            <span id="lbl-boss-portal" style="font-weight: bold; color: #475569;">🔑 Espace Manager:</span>
+            <input type="text" id="boss-code" class="boss-input" placeholder="Code..." onkeypress="handleBossKey(event)">
+            <button class="inline-btn" onclick="verifyBossCode()">OK</button>
+        </div>
+        <h2 id="lbl-login-title" style="text-align: center; margin-bottom: 15px;">Accès Employés</h2>
+        <div class="lists-container">
+            <div style="background: white; border-radius: 10px; border: 1px solid #cbd5e1; overflow: hidden;"><div id="list-branch1"></div></div>
+            <div style="background: white; border-radius: 10px; border: 1px solid #cbd5e1; overflow: hidden;"><div id="list-branch2"></div></div>
+        </div>
+    </div>
+
+    <div id="panel-jefe" class="view-panel">
+        <div class="welcome-user">👑 <span id="jefe-welcome-name"></span></div>
+        
+        <div class="crud-box">
+            <strong id="lbl-crud-title">➕ Ajouter un Nouvel Employé</strong>
+            <div class="crud-inputs">
+                <input type="text" id="new-worker-name" placeholder="Nom">
+                <input type="text" id="new-worker-code" placeholder="Code">
+                <button class="inline-btn" onclick="addNewWorker()">+</button>
+            </div>
+        </div>
+
+        <h2 id="title-jefe" style="font-size: 1.1rem; margin-bottom: 10px;">Gestion des plannings</h2>
+        <div class="excel-table" id="excel-jefe-table"></div>
+
+        <div class="history-box">
+            <h3 style="margin-top:0; font-size:1rem;">📅 <span id="lbl-historial-title">Historique depuis le 1er Mai</span></h3>
+            <div class="history-workers-list" id="history-buttons-container"></div>
+            <div class="calendar-dropdown-container" id="dropdown-calendar-root"></div>
+        </div>
+
+        <button class="action-btn" id="btn-save" onclick="saveData()">Enregistrer</button>
+        <button class="action-btn logout-btn" onclick="logout()">Quitter</button>
+    </div>
+
+    <div id="panel-trabajador" class="view-panel">
+        <div class="welcome-user">👤 <span id="worker-welcome-name"></span></div>
+        <h2 id="title-trabajador">Mon Planning Hebdomadaire</h2>
+        <div class="excel-table" id="excel-worker-table"></div>
+        <button class="action-btn logout-btn" onclick="logout()">Quitter</button>
+    </div>
+
+    <script>
+        // ===================================================
+        // 🔑 CONFIGURACIÓN DE TU CONEXIÓN SUPABASE CLOUD
+        // ===================================================
+        const SUPABASE_URL = "https://yzoqnuawxnyybwgzgtlm.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_6t_P3nZTKB6ucvJzLprf1w_ekPQOWbJ"; 
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const langData = {
+            fr: {
+                loginTitle: "Accès Employés", bossPortal: "🔑 Espace Manager:",
+                titleJefe: "Gestion des plannings de l'équipe", titleTrabajador: "Mon Planning Hebdomadaire",
+                btnSave: "Enregistrer les modifications", alertSave: "Données enregistrées sur Supabase ! 😊",
+                dias: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+                colWorker: "Employé / Code", invalidCode: "Code incorrect ! ❌",
+                welcomeJefe: "Manager : ", crudTitle: "➕ Ajouter un Nouvel Employé", crudAlert: "Erreur !",
+                btnConnect: "Connexion", historialTitle: "Historique depuis le 1er Mai"
+            },
+            es: {
+                loginTitle: "Acceso Empleados", bossPortal: "🔑 Área Manager:",
+                titleJefe: "Gestión de turnos del equipo", titleTrabajador: "Mi Horario Semanal",
+                btnSave: "Guardar Cambios", alertSave: "¡Datos guardados en Supabase! 😊",
+                dias: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+                colWorker: "Empleado / Código", invalidCode: "¡Código incorrecto! ❌",
+                welcomeJefe: "Manager: ", crudTitle: "➕ Agregar Trabajador", crudAlert: "¡Error!",
+                btnConnect: "Entrar", historialTitle: "Historial desde el 1 de Mayo"
+            }
+        };
+
+        const frenchDaysMapping = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+        let currentLang = 'fr';
+        let currentUser = null;
+        let selectedWorkerHistory = null;
+
+        const BOSS_KEYS = { "ABDO RH": { name: "ABDO RH", branch: "branch1" }, "ABDO NR": { name: "ABDO NR", branch: "branch2" } };
+        
+        // Estructura de datos por defecto si Supabase está vacío
+        let databaseWorkers = {
+            branch1: [{ name: "Carlos", code: "TR2009" }, { name: "Ana", code: "TR8822" }],
+            branch2: [{ name: "Omar", code: "OM55" }, { name: "Youssef", code: "YO88" }]
+        };
+        let databaseTurnos = {
+            Carlos: Array(7).fill(null).map(() => ({ isWorking: false, text: "" })),
+            Ana: Array(7).fill(null).map(() => ({ isWorking: false, text: "" })),
+            Omar: Array(7).fill(null).map(() => ({ isWorking: false, text: "" })),
+            Youssef: Array(7).fill(null).map(() => ({ isWorking: false, text: "" }))
+        };
+        let databaseHistory = { Carlos: [], Ana: [], Omar: [], Youssef: [] };
+
+        // DESCARGA AUTOMÁTICA EN TIEMPO REAL DESDE SUPABASE
+        async function loadFromSupabase() {
+            try {
+                const { data, error } = await _supabase.from('transcar_data').select('*');
+                if (data && !error && data.length > 0) {
+                    data.forEach(row => {
+                        if (row.key === 'workers') databaseWorkers = row.value;
+                        if (row.key === 'turnos') databaseTurnos = row.value;
+                        if (row.key === 'history') databaseHistory = row.value;
+                    });
+                }
+            } catch(e) { console.error("Error cargando de Supabase:", e); }
+            renderLoginLists();
+        }
+
+        // SUBIDA AUTOMÁTICA EN TIEMPO REAL A SUPABASE
+        async function syncToSupabase(keyName, jsonValue) {
+            try {
+                await _supabase.from('transcar_data').upsert({ key: keyName, value: jsonValue }, { onConflict: 'key' });
+            } catch(e) { console.error("Error sincronizando:", e); }
+        }
+
+        function getWeekDatesStrings() {
+            let current = new Date();
+            let dayOfWeek = current.getDay();
+            let distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; 
+            let monday = new Date(current.setDate(current.getDate() + distanceToMonday));
+            let dates = [];
+            for (let i = 0; i < 7; i++) {
+                let d = new Date(monday); d.setDate(monday.getDate() + i);
+                dates.push(`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }
+            return dates;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-selector button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${lang}`).classList.add('active');
+            renderLoginLists();
+            if (currentUser) { if (currentUser.role === 'jefe') loadJefeExcel(); else renderWorkerExcel(); }
+        }
+
+        function renderLoginLists() {
+            const b1 = document.getElementById('list-branch1'); b1.innerHTML = "";
+            databaseWorkers.branch1.forEach(emp => { b1.innerHTML += `<div class="login-list-row"><span>👤 ${emp.name}</span><div><input type="password" id="pass-${emp.name}" class="inline-input"><button class="inline-btn" onclick="verifyWorkerCode('${emp.name}')">OK</button></div></div>`; });
+            const b2 = document.getElementById('list-branch2'); b2.innerHTML = "";
+            databaseWorkers.branch2.forEach(emp => { b2.innerHTML += `<div class="login-list-row"><span>👤 ${emp.name}</span><div><input type="password" id="pass-${emp.name}" class="inline-input"><button class="inline-btn" onclick="verifyWorkerCode('${emp.name}')">OK</button></div></div>`; });
+        }
+
+        function verifyWorkerCode(name) {
+            let found = [...databaseWorkers.branch1, ...databaseWorkers.branch2].find(w => w.name === name);
+            if (found && document.getElementById(`pass-${name}`).value.trim() === found.code) {
+                currentUser = { role: "trabajador", name: name };
+                document.getElementById('panel-login').style.display = 'none';
+                document.getElementById('panel-trabajador').style.display = 'block';
+                document.getElementById('worker-welcome-name').innerText = name;
+                renderWorkerExcel();
+            } else { alert("Code incorrect !"); }
+        }
+
+        function handleBossKey(e) { if (e.key === 'Enter') verifyBossCode(); }
+        function verifyBossCode() {
+            const code = document.getElementById('boss-code').value.trim();
+            const boss = BOSS_KEYS[code];
+            if (boss) {
+                currentUser = { role: "jefe", name: boss.name, branch: boss.branch };
+                document.getElementById('panel-login').style.display = 'none';
+                document.getElementById('panel-jefe').style.display = 'block';
+                document.getElementById('jefe-welcome-name').innerText = boss.name;
+                loadJefeExcel();
+            } else { alert("Code incorrect !"); }
+        }
+
+        async function addNewWorker() {
+            const n = document.getElementById('new-worker-name').value.trim();
+            const c = document.getElementById('new-worker-code').value.trim();
+            if(!n || !c) return;
+            
+            databaseWorkers[currentUser.branch].push({ name: n, code: c });
+            databaseTurnos[n] = Array(7).fill(null).map(() => ({ isWorking: false, text: "" }));
+            databaseHistory[n] = [];
+            
+            // Envío inmediato del nuevo trabajador a la nube
+            await syncToSupabase('workers', databaseWorkers);
+            await syncToSupabase('turnos', databaseTurnos);
+            await syncToSupabase('history', databaseHistory);
+            
+            loadJefeExcel();
+            document.getElementById('new-worker-name').value = "";
+            document.getElementById('new-worker-code').value = "";
+        }
+
+        let cellStatesMemo = {};
+
+        function loadJefeExcel() {
+            const table = document.getElementById('excel-jefe-table');
+            const t = langData[currentLang];
+            const dates = getWeekDatesStrings();
+            table.innerHTML = `<div class="excel-cell excel-header">${t.colWorker}</div>`;
+            t.dias.forEach((dia, idx) => { table.innerHTML += `<div class="excel-cell excel-header">${dia} <span class="date-sub">${dates[idx]}</span></div>`; });
+
+            databaseWorkers[currentUser.branch].forEach(emp => {
+                const nombre = emp.name;
+                const celdas = databaseTurnos[nombre] || Array(7).fill(null).map(() => ({ isWorking: false, text: "" }));
+
+                table.innerHTML += `
+                    <div class="excel-cell" style="font-weight:bold; min-height:55px;">
+                        <div>${nombre}</div>
+                        <input type="text" id="code-edit-${nombre}" style="width:65px; font-size:0.7rem; text-align:center;" value="${emp.code}">
+                    </div>
+                `;
+                
+                for (let i = 0; i < 7; i++) {
+                    const obj = celdas[i] || { isWorking: false, text: "" };
+                    const memoKey = `${nombre}-${i}`;
+                    cellStatesMemo[memoKey] = obj.isWorking;
+
+                    table.innerHTML += `
+                        <div class="excel-cell" id="boxcell-${nombre}-${i}">
+                            <div class="click-zone" onclick="toggleCellWorking('${nombre}', ${i})">
+                                <span id="indicator-${nombre}-${i}" class="red-x-indicator">❌</span>
+                            </div>
+                            <input type="text" id="text-${nombre}-${i}" class="excel-text-item" value="${obj.text}" placeholder="Note...">
+                        </div>
+                    `;
+                    setTimeout(() => refreshCellView(nombre, i), 10);
+                }
+            });
+            renderHistoryButtons();
+        }
+
+        function toggleCellWorking(nombre, idx) {
+            const memoKey = `${nombre}-${idx}`;
+            cellStatesMemo[memoKey] = !cellStatesMemo[memoKey];
+            refreshCellView(nombre, idx);
+        }
+
+        function refreshCellView(nombre, idx) {
+            const memoKey = `${nombre}-${idx}`;
+            const status = cellStatesMemo[memoKey];
+            const cellWrapper = document.getElementById(`boxcell-${nombre}-${idx}`);
+            const indicator = document.getElementById(`indicator-${nombre}-${idx}`);
+
+            if (status) {
+                cellWrapper.classList.add('status-working');
+                indicator.innerText = "🟢";
+                indicator.className = "green-dot-indicator";
+            } else {
+                cellWrapper.classList.remove('status-working');
+                indicator.innerText = "❌";
+                indicator.className = "red-x-indicator";
+            }
+        }
+
+        function renderHistoryButtons() {
+            const container = document.getElementById('history-buttons-container');
+            container.innerHTML = "";
+            databaseWorkers[currentUser.branch].forEach(emp => {
+                const nombre = emp.name;
+                const isActive = (selectedWorkerHistory === nombre) ? 'active' : '';
+                container.innerHTML += `<button class="worker-history-btn ${isActive}" onclick="toggleWorkerHistoryCalendar('${nombre}')">👤 ${nombre}</button>`;
+            });
+        }
+
+        function toggleWorkerHistoryCalendar(nombre) {
+            const dropdown = document.getElementById('dropdown-calendar-root');
+            if (selectedWorkerHistory === nombre) {
+                selectedWorkerHistory = null;
+                dropdown.style.display = 'none';
+                renderHistoryButtons();
+                return;
+            }
+            selectedWorkerHistory = nombre;
+            renderHistoryButtons();
+            updateHistoryCalendarUI(nombre);
+        }
+
+        function updateHistoryCalendarUI(nombre) {
+            const dropdown = document.getElementById('dropdown-calendar-root');
+            dropdown.style.display = 'block';
+            let targetYear = 2026;
+            let startDate = new Date(targetYear, 4, 1); 
+            let endDate = new Date();
+            let html = `
+                <div style="font-weight: bold; margin-bottom: 8px; color: #1e293b; font-size: 0.9rem;">
+                    📅 Calendrier rétroactif pour <span style="color:var(--accent);">${nombre}</span> (Depuis le 1er Mai)
+                </div>
+                <div class="calendar-grid-mayo">
+            `;
+
+            let loopDate = new Date(startDate);
+            while (loopDate <= endDate) {
+                let dayFr = frenchDaysMapping[loopDate.getDay()]; 
+                let dateStr = `${String(loopDate.getDate()).padStart(2, '0')}/${String(loopDate.getMonth() + 1).padStart(2, '0')}`;
+                let labelCompleto = `${dayFr} ${dateStr}`; 
+                
+                let match = (databaseHistory[nombre] || []).find(h => h.d === dateStr);
+                let contentText = "";
+                let bgStyle = "";
+
+                if (match && match.isWorking) {
+                    bgStyle = "background-color: #4ade80; color: white;";
+                    contentText = `🟢 ${match.text ? match.text : ''}`;
+                } else if (match && !match.isWorking && match.text) {
+                    contentText = `${match.text}`;
+                }
+
+                html += `
+                    <div class="calendar-day-box" style="${bgStyle}">
+                        <div class="day-num" style="${match && match.isWorking ? 'color:#fff;' : ''}">${labelCompleto}</div>
+                        <div class="day-content">${contentText}</div>
+                    </div>
+                `;
+                loopDate.setDate(loopDate.getDate() + 1);
+            }
+            html += `</div>`;
+            dropdown.innerHTML = html;
+        }
+
+        async function saveData() {
+            const dates = getWeekDatesStrings();
+            databaseWorkers[currentUser.branch].forEach(emp => {
+                const nombre = emp.name;
+                
+                const codeInput = document.getElementById(`code-edit-${nombre}`);
+                if (codeInput) emp.code = codeInput.value.trim();
+
+                let nuevosDatosSemana = [];
+                if (!databaseHistory[nombre]) databaseHistory[nombre] = [];
+
+                for (let i = 0; i < 7; i++) {
+                    const memoKey = `${nombre}-${i}`;
+                    const trabaja = cellStatesMemo[memoKey] || false;
+                    const nota = document.getElementById(`text-${nombre}-${i}`).value;
+                    const fechaDia = dates[i];
+
+                    nuevosDatosSemana.push({ isWorking: trabaja, text: nota });
+
+                    let historicoDia = databaseHistory[nombre].find(h => h.d === fechaDia);
+                    if (historicoDia) {
+                        historicoDia.isWorking = trabaja;
+                        historicoDia.text = nota;
+                    } else {
+                        databaseHistory[nombre].push({ d: fechaDia, isWorking: trabaja, text: nota });
+                    }
+                }
+                databaseTurnos[nombre] = nuevosDatosSemana;
+            });
+
+            // GUARDADO GLOBAL DIRECTO A SUPABASE
+            await syncToSupabase('workers', databaseWorkers);
+            await syncToSupabase('turnos', databaseTurnos);
+            await syncToSupabase('history', databaseHistory);
+            
+            alert(langData[currentLang].alertSave);
+            if (selectedWorkerHistory) updateHistoryCalendarUI(selectedWorkerHistory);
+        }
+
+        function renderWorkerExcel() {
+            const table = document.getElementById('excel-worker-table');
+            const celdas = databaseTurnos[currentUser.name] || Array(7).fill(null).map(() => ({ isWorking: false, text: "" }));
+            const dates = getWeekDatesStrings();
+            table.innerHTML = `<div class="excel-cell excel-header">Employé</div>`;
+            langData[currentLang].dias.forEach((dia, idx) => { table.innerHTML += `<div class="excel-cell excel-header">${dia} <span class="date-sub">${dates[idx]}</span></div>`; });
+
+            table.innerHTML += `<div class="excel-cell" style="font-weight:bold;">${currentUser.name}</div>`;
+            for (let i = 0; i < 7; i++) {
+                const obj = celdas[i] || { isWorking: false, text: "" };
+                let txt = obj.isWorking ? "🟢 <b>Travail</b><br>" : "❌<br>";
+                if (obj.text) txt += `<span style="font-size:0.75rem;color:#475569;">${obj.text}</span>`;
+                table.innerHTML += `<div class="excel-cell" style="${obj.isWorking ? 'background-color:#dcfce7;' : ''}">${txt}</div>`;
+            }
+        }
+
+        async function logout() { 
+            selectedWorkerHistory = null; 
+            currentUser = null; 
+            document.getElementById('panel-jefe').style.display = 'none'; 
+            document.getElementById('panel-trabajador').style.display = 'none'; 
+            document.getElementById('panel-login').style.display = 'block'; 
+            document.getElementById('dropdown-calendar-root').style.display = 'none'; 
+            await loadFromSupabase(); 
+        }
+        
+        window.onload = async function() { 
+            await loadFromSupabase(); 
+            setLanguage('fr'); 
+        };
+    </script>
+</body>
+</html>
