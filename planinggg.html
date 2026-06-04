@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcar Planing</title>
+    
+    <!-- Librería de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* TU DISEÑO ORIGINAL COMPLETO */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #fef08a 0%, #f9a8d4 50%, #93c5fd 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Contenedor blanco principal */
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            width: 100%;
+            max-width: 900px;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 1px solid #cbd5e1;
+        }
+
+        /* Barra de arriba (Logo y botones de idioma) */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .logo-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-badge {
+            background-color: #f97316;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 1.3rem;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .lang-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .lang-btn {
+            border: 1px solid #cbd5e1;
+            background: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #475569;
+            cursor: pointer;
+        }
+
+        .lang-btn.active {
+            background-color: #f97316;
+            color: white;
+            border-color: #f97316;
+        }
+
+        /* Bloque Manager */
+        .manager-section {
+            background-color: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 1.6rem;
+            color: #1e293b;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        /* Grid de empleados (PC vs Móvil) */
+        .employees-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2 columnas en PC como tu captura */
+            gap: 15px;
+        }
+
+        .employee-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .employee-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .employee-icon {
+            color: #475569;
+        }
+
+        .input-action-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Inputs y botones OK originales */
+        input[type="password"], input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            width: 100px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .btn-ok {
+            background-color: #f97316;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-ok:active {
+            transform: scale(0.95);
+        }
+
+        /* ===================================================
+           ⚡ ADAPTACIÓN EXCLUSIVA PARA MÓVILES (TLs)
+           =================================================== */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .top-bar {
+                padding: 10px 16px;
+                margin-bottom: 15px;
+            }
+
+            .logo-badge {
+                font-size: 1.1rem;
+                padding: 4px 12px;
+            }
+
+            .logo-text {
+                font-size: 1.1rem;
+            }
+
+            .main-container {
+                padding: 15px;
+                border-radius: 16px;
+            }
+
+            /* El bloque manager se adapta verticalmente */
+            .manager-section {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                padding: 12px;
+            }
+
+            .manager-section input {
+                width: 100%; /* Código a lo ancho en móvil */
+                max-width: 200px;
+            }
+
+            .section-title {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+            }
+
+            /* ¡LA MAGIA! En móvil pasa de 2 columnas a 1 sola columna */
+            .employees-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .employee-card {
+                padding: 14px; /* Más espacio táctil */
+            }
+
+            /* Los campos de texto y botones se hacen más grandes para los dedos */
+            input[type="password"], input[type="text"], .btn-ok {
+                padding: 10px 12px;
+                font-size: 0.95rem;
+            }
+            
+            input[type="password"], input[type="text"] {
+                width: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA SUPERIOR -->
+    <div class="top-bar">
+        <div class="logo-box">
+            <span class="logo-badge">TRANSCAR</span>
+            <span class="logo-text">Planing</span>
+        </div>
+        <div class="lang-buttons">
+            <button class="lang-btn active">FR</button>
+            <button class="lang-btn">ES</button>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR BLANCO -->
+    <div class="main-container">
+        
+        <!-- ESPACIO MANAGER -->
+        <div class="manager-section">
+            <span style="font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 5px;">
+                🔑 Espace Manager:
+            </span>
+            <div class="input-action-group">
+                <input type="password" id="manager-code" placeholder="Code...">
+                <button class="btn-ok" onclick="verificarManager()">OK</button>
+            </div>
+        </div>
+
+        <div class="section-title">Accès Employés</div>
+
+        <!-- REJILLA DE EMPLEADOS -->
+        <div class="employees-grid">
+            
+            <!-- Carlos -->
+            <div class="employee-card">
+                <div class="employee-info">
+                    <span class="employee-icon">👤</span>
+                    <span>Carlos</span>
+                </div>
+                <div class="input-action-group">
+                    <input type="password" id="code-carlos" placeholder="">
+                    <button class="btn-ok" onclick="verificarEmpleado('Carlos')">OK</button>
+                </div>
+            </div>
+
+            <!-- Omar -->
+            <div class="employee-card">
+                <div class="employee-info">
+                    <span class="employee-icon">👤</span>
+                    <span>Omar</span>
+                </div>
+                <div class="input-action-group">
+                    <input type="password" id="code-omar" placeholder="">
+                    <button class="btn-ok" onclick="verificarEmpleado('Omar')">OK</button>
+                </div>
+            </div>
+
+            <!-- Ana -->
+            <div class="employee-card">
+                <div class="employee-info">
+                    <span class="employee-icon">👤</span>
+                    <span>Ana</span>
+                </div>
+                <div class="input-action-group">
+                    <input type="password" id="code-ana" placeholder="">
+                    <button class="btn-ok" onclick="verificarEmpleado('Ana')">OK</button>
+                </div>
+            </div>
+
+            <!-- Youssef -->
+            <div class="employee-card">
+                <div class="employee-info">
+                    <span class="employee-icon">👤</span>
+                    <span>Youssef</span>
+                </div>
+                <div class="input-action-group">
+                    <input type="password" id="code-youssef" placeholder="">
+                    <button class="btn-ok" onclick="verificarEmpleado('Youssef')">OK</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ===================================================
+        // CONFIGURACIÓN DE TU BASE DE DATOS SUPABASE
+        // ===================================================
+        const SUPABASE_URL = "https://yzoqnuawxnyybwgzgtlm.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_6t_P3nZTKB6ucvJzLprf1w_ekPQOWbJ";
+        
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function verificarManager() {
+            const code = document.getElementById('manager-code').value;
+            // Aquí va tu lógica original para entrar al panel del administrador
+            alert('Vérification Manager avec le code: ' + code);
+        }
+
+        function verificarEmpleado(nombre) {
+            // Convierte el nombre a minúsculas para coger el id del input correcto
+            const idInput = 'code-' + nombre.toLowerCase();
+            const code = document.getElementById(idInput).value;
+            // Aquí va tu lógica original para que el empleado vea su turno
+            alert('Vérification pour ' + nombre + ' avec le code: ' + code);
+        }
+    </script>
+</body>
+</html>
